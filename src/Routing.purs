@@ -9,7 +9,7 @@ module Routing (
   matchesAff'
   ) where
 
-import Prelude (Unit, unit, pure, const, ($))
+import Prelude (Unit, unit, pure, const, void, ($))
 import Control.Monad.Eff (Eff())
 import Control.Monad.Aff (Aff(), makeAff)
 import Data.Maybe (Maybe(..))
@@ -24,10 +24,10 @@ import Routing.Match (Match, runMatch)
 
 foreign import decodeURIComponent :: String -> String
 
-foreign import hashChanged :: forall e. (String -> String -> Eff e Unit) -> Eff e Unit
+foreign import hashChanged :: forall e. (String -> String -> Eff e Unit) -> Eff e (Eff e Unit)
 
 
-hashes :: forall e. (String -> String -> Eff e Unit) -> Eff e Unit
+hashes :: forall e. (String -> String -> Eff e Unit) -> Eff e (Eff e Unit)
 hashes cb =
   hashChanged $ \old new -> do
     cb (dropHash old) (dropHash new)
@@ -40,11 +40,11 @@ hashes cb =
 -- | Stream of hash changed, callback called when new hash can be matched
 -- | First argument of callback is `Just a` when old hash can be matched
 -- | and `Nothing` when it can't.
-matches :: forall e a. Match a -> (Maybe a -> a -> Eff e Unit) -> Eff e Unit
+matches :: forall e a. Match a -> (Maybe a -> a -> Eff e Unit) -> Eff e (Eff e Unit)
 matches = matches' decodeURIComponent
 
 matches' :: forall e a. (String -> String) ->
-            Match a -> (Maybe a -> a -> Eff e Unit) -> Eff e Unit
+            Match a -> (Maybe a -> a -> Eff e Unit) -> Eff e (Eff e Unit)
 matches' decoder routing cb = hashes $ \old new ->
   let mr = matchWith decoder routing
       fst = either (const Nothing) Just $ mr old
@@ -54,7 +54,7 @@ matchesAff' :: forall e a. (String -> String) ->
                Match a -> Aff e (Tuple (Maybe a) a)
 matchesAff' decoder routing =
   makeAff \_ k -> do
-    matches' decoder routing \old new ->
+    void $ matches' decoder routing \old new ->
       k $ Tuple old new
 
 matchesAff :: forall e a. Match a -> Aff e (Tuple (Maybe a) a)

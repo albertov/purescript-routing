@@ -7,11 +7,15 @@ exports.hashChanged = function(handler) {
         };
         var oldHash = '';
         handler('')(getHash())();
-        window.addEventListener('hashchange', function(ev) {
+        function hashChange (ev) {
             var newHash = getHash();
             handler(oldHash)(newHash)();
             oldHash = newHash;
-        });
+        }
+        window.addEventListener('hashchange', hashChange);
+        return function () {
+          window.removeEventListener('hashchange', hashChange);
+        }
     };
 };
 
