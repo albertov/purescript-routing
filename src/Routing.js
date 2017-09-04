@@ -14,7 +14,9 @@ exports.hashChanged = function(handler) {
         }
         window.addEventListener('hashchange', hashChange);
         return function () {
-          window.removeEventListener('hashchange', hashChange);
+          return function () {
+            window.removeEventListener('hashchange', hashChange);
+          }
         }
     };
 };
